@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trail Painter Duel - Snake Battle Royale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .game-board {
+            width: 500px;
+            height: 500px;
+            border: 3px solid #fff;
+            margin: 20px auto;
+            position: relative;
+            background: #222;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(25, 1fr);
+            grid-template-rows: repeat(25, 1fr);
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background-color 0.2s;
+        }
+
+        .player1 {
+            background: #ff6b6b;
+            box-shadow: inset 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        .player2 {
+            background: #4ecdc4;
+            box-shadow: inset 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+
+        .player-score {
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .timer {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #ffeb3b;
+        }
+
+        .game-over {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            z-index: 1000;
+        }
+
+        @media (max-width: 600px) {
+            .game-board {
+                width: 300px;
+                height: 300px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .grid {
+                grid-template-columns: repeat(15, 1fr);
+                grid-template-rows: repeat(15, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 Trail Painter Duel</h1>
+        <p class="subtitle">Snake Battle Royale - Paint Your Territory!</p>
+        
+        <div id="menu-screen">
+            <div class="instructions">
+                <h3>🎯 How to Play:</h3>
+                <ul>
+                    <li><strong>Player 1:</strong> Use WASD keys to move</li>
+                    <li><strong>Player 2:</strong> Use Arrow keys to move</li>
+                    <li><strong>Goal:</strong> Paint more territory than your opponent!</li>
+                    <li><strong>Strategy:</strong> Move over opponent's painted cells to steal their territory</li>
+                    <li><strong>Timer:</strong> 60 seconds per round - most territory wins!</li>
+                </ul>
+            </div>
+            
+            <button class="btn" onclick="startGame()">🚀 Start 2-Player Game</button>
+            <button class="btn" onclick="startSinglePlayer()">🤖 Play vs AI</button>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="score-board">
+                <div class="player-score" style="color: #ff6b6b;">
+                    <strong>Player 1: <span id="score1">0</span>%</strong>
+                </div>
+                <div class="timer" id="timer">60</div>
+                <div class="player-score" style="color: #4ecdc4;">
+                    <strong>Player 2: <span id="score2">0</span>%</strong>
+                </div>
+            </div>
+
+            <div class="game-board" id="gameBoard">
+                <div class="grid" id="grid"></div>
+            </div>
+
+            <div class="controls">
+                <button class="btn" onclick="pauseGame()">⏸️ Pause</button>
+                <button class="btn" onclick="endGame()">🏠 Menu</button>
+            </div>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2 id="winner">Game Over!</h2>
+            <p id="finalScore"></p>
+            <button class="btn" onclick="restartGame()">🔄 Play Again</button>
+            <button class="btn" onclick="goToMenu()">🏠 Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            board: [],
+            player1: { x: 5, y: 5 },
+            player2: { x: 19, y: 19 },
+            gameActive: false,
+            timeLeft: 60,
+            gameMode: 'twoPlayer', // 'twoPlayer' or 'ai'
+            gridSize: 25
+        };
+
+        // Initialize game
+        function initGame() {
+            const isMobile = window.innerWidth < 600;
+            gameState.gridSize = isMobile ? 15 : 25;
+            
+            // Initialize board
+            gameState.board = Array(gameState.gridSize).fill().map(() => 
+                Array(gameState.gridSize).fill(0)
+            );
+            
+            // Reset player positions
+            gameState.player1 = { x: 2, y: 2 };
+            gameState.player2 = { 
+                x: gameState.gridSize - 3, 
+                y: gameState.gridSize - 3 
+            };
+            
+            gameState.timeLeft = 60;
+            
+            createGrid();
+            updateDisplay();
+        }
+
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${gameState.gridSize}, 1fr)`;
+            grid.style.gridTemplateRows = `repeat(${gameState.gridSize}, 1fr)`;
+            
+            for (let i = 0; i < gameState.gridSize * gameState.gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                grid.appendChild(cell);
+            }
+        }
+
+        function startGame() {
+            gameState.gameMode = 'twoPlayer';
+            initGame();
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.querySelector('.game-board').style.display = 'block';
+            gameState.gameActive = true;
+            startTimer();
+        }
+
+        function startSinglePlayer() {
+            gameState.gameMode = 'ai';
+            initGame();
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.querySelector('.game-board').style.display = 'block';
+            gameState.gameActive = true;
+            startTimer();
+        }
+
+        function startTimer() {
+            const timer = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('timer').textContent = gameState.timeLeft;
+                
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGameWithResults();
+                }
+                
+                if (!gameState.gameActive) {
+                    clearInterval(timer);
+                }
+            }, 1000);
+        }
+
+        function movePlayer(player, dx, dy) {
+            if (!gameState.gameActive) return;
+            
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            // Check bounds
+            if (newX >= 0 && newX < gameState.gridSize && 
+                newY >= 0 && newY < gameState.gridSize) {
+                player.x = newX;
+                player.y = newY;
+                
+                // Paint cell
+                const playerNum = player === gameState.player1 ? 1 : 2;
+                gameState.board[player.y][player.x] = playerNum;
+                
+                updateDisplay();
+            }
+        }
+
+        function updateDisplay() {
+            // Clear grid
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+            });
+            
+            // Paint cells
+            for (let y = 0; y < gameState.gridSize; y++) {
+                for (let x = 0; x < gameState.gridSize; x++) {
+                    const cellIndex = y * gameState.gridSize + x;
+                    const cell = document.getElementById(`cell-${cellIndex}`);
+                    
+                    if (gameState.board[y][x] === 1) {
+                        cell.classList.add('player1');
+                    } else if (gameState.board[y][x] === 2) {
+                        cell.classList.add('player2');
+                    }
+                }
+            }
+            
+            // Highlight current positions
+            const p1Index = gameState.player1.y * gameState.gridSize + gameState.player1.x;
+            const p2Index = gameState.player2.y * gameState.gridSize + gameState.player2.x;
+            
+            document.getElementById(`cell-${p1Index}`).style.border = '3px solid #fff';
+            document.getElementById(`cell-${p2Index}`).style.border = '3px solid #fff';
+            
+            // Update scores
+            calculateScores();
+        }
+
+        function calculateScores() {
+            let score1 = 0, score2 = 0;
+            const totalCells = gameState.gridSize * gameState.gridSize;
+            
+            for (let y = 0; y < gameState.gridSize; y++) {
+                for (let x = 0; x < gameState.gridSize; x++) {
+                    if (gameState.board[y][x] === 1) score1++;
+                    if (gameState.board[y][x] === 2) score2++;
+                }
+            }
+            
+            const score1Percent = Math.round((score1 / totalCells) * 100);
+            const score2Percent = Math.round((score2 / totalCells) * 100);
+            
+            document.getElementById('score1').textContent = score1Percent;
+            document.getElementById('score2').textContent = score2Percent;
+        }
+
+        // AI logic for single player
+        function moveAI() {
+            if (gameState.gameMode !== 'ai' || !gameState.gameActive) return;
+            
+            const directions = [
+                {dx: 0, dy: -1}, {dx: 1, dy: 0}, 
+                {dx: 0, dy: 1}, {dx: -1, dy: 0}
+            ];
+            
+            // Simple AI: move towards player 1 or find empty space
+            let bestMove = directions[Math.floor(Math.random() * directions.length)];
+            
+            // Try to steal player 1's territory
+            for (let dir of directions) {
+                const newX = gameState.player2.x + dir.dx;
+                const newY = gameState.player2.y + dir.dy;
+                
+                if (newX >= 0 && newX < gameState.gridSize && 
+                    newY >= 0 && newY < gameState.gridSize &&
+                    gameState.board[newY][newX] === 1) {
+                    bestMove = dir;
+                    break;
+                }
+            }
+            
+            movePlayer(gameState.player2, bestMove.dx, bestMove.dy);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.gameActive) return;
+            
+            switch(e.key.toLowerCase()) {
+                // Player 1 (WASD)
+                case 'w': movePlayer(gameState.player1, 0, -1); break;
+                case 's': movePlayer(gameState.player1, 0, 1); break;
+                case 'a': movePlayer(gameState.player1, -1, 0); break;
+                case 'd': movePlayer(gameState.player1, 1, 0); break;
+                
+                // Player 2 (Arrow keys) - only in two player mode
+                case 'arrowup': 
+                    if (gameState.gameMode === 'twoPlayer') {
+                        movePlayer(gameState.player2, 0, -1); 
+                    }
+                    break;
+                case 'arrowdown': 
+                    if (gameState.gameMode === 'twoPlayer') {
+                        movePlayer(gameState.player2, 0, 1); 
+                    }
+                    break;
+                case 'arrowleft': 
+                    if (gameState.gameMode === 'twoPlayer') {
+                        movePlayer(gameState.player2, -1, 0); 
+                    }
+                    break;
+                case 'arrowright': 
+                    if (gameState.gameMode === 'twoPlayer') {
+                        movePlayer(gameState.player2, 1, 0); 
+                    }
+                    break;
+            }
+            
+            // Move AI after player 1 moves
+            if (gameState.gameMode === 'ai') {
+                setTimeout(moveAI, 200);
+            }
+        });
+
+        function pauseGame() {
+            gameState.gameActive = !gameState.gameActive;
+        }
+
+        function endGame() {
+            gameState.gameActive = false;
+            goToMenu();
+        }
+
+        function endGameWithResults() {
+            gameState.gameActive = false;
+            
+            const score1 = parseInt(document.getElementById('score1').textContent);
+            const score2 = parseInt(document.getElementById('score2').textContent);
+            
+            let winner = '';
+            if (score1 > score2) {
+                winner = '🎉 Player 1 Wins!';
+            } else if (score2 > score1) {
+                winner = gameState.gameMode === 'ai' ? '🤖 AI Wins!' : '🎉 Player 2 Wins!';
+            } else {
+                winner = '🤝 It\'s a Tie!';
+            }
+            
+            document.getElementById('winner').textContent = winner;
+            document.getElementById('finalScore').textContent = 
+                `Final Score: Player 1: ${score1}% | ${gameState.gameMode === 'ai' ? 'AI' : 'Player 2'}: ${score2}%`;
+            
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            if (gameState.gameMode === 'twoPlayer') {
+                startGame();
+            } else {
+                startSinglePlayer();
+            }
+        }
+
+        function goToMenu() {
+            gameState.gameActive = false;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'block';
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            console.log('🎮 Trail Painter Duel loaded successfully!');
+        };
+    </script>
+</body>
+</html>
